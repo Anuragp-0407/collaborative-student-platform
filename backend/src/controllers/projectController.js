@@ -114,8 +114,114 @@ const getProjectById = async (req, res) => {
     }
 };
 
+const updateProject = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        const project = await Project.findById(id);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        if (project.owner.toString() !== req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to update this project",
+            });
+        }
+
+        const allowedFields = [
+            "title",
+            "description",
+            "category",
+            "technologies",
+            "requiredSkills",
+            "maxTeamSize",
+            "githubUrl",
+            "demoUrl",
+        ];
+
+        allowedFields.forEach((field) => {
+            if (req.body[field] !== undefined) {
+                project[field] = req.body[field];
+            }
+        });
+
+        await project.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Project updated successfully",
+            project,
+        });
+    } catch (error) {
+        console.error("Update project error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
+const deleteProject = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        const project = await Project.findById(id);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        if (project.owner.toString() !== req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to delete this project",
+            });
+        }
+
+        await Project.findByIdAndDelete(id);
+
+        res.status(200).json({
+            success: true,
+            message: "Project deleted successfully",
+        });
+    } catch (error) {
+        console.error("Delete project error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     createProject,
     getProjects,
     getProjectById,
+    updateProject,
+    deleteProject,
 };
