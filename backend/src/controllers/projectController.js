@@ -56,6 +56,28 @@ const createProject = async (req, res) => {
     }
 };
 
+const getProjects = async (req, res) => {
+    try {
+        const projects = await Project.find()
+            .populate("owner", "name email profileImage")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: projects.length,
+            projects,
+        });
+    } catch (error) {
+        console.error("Get projects error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     createProject,
+    getProjects,
 };
