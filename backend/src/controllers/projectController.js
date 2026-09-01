@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Project = require("../models/Project");
 
 const createProject = async (req, res) => {
@@ -77,7 +78,44 @@ const getProjects = async (req, res) => {
     }
 };
 
+const getProjectById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        const project = await Project.findById(id)
+            .populate("owner", "name email profileImage")
+            .populate("members.user", "name email profileImage");
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            project,
+        });
+    } catch (error) {
+        console.error("Get project error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     createProject,
     getProjects,
+    getProjectById,
 };
