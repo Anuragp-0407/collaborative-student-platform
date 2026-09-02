@@ -301,8 +301,67 @@ const updateTask = async (req, res) => {
         });
     }
 };
+
+const deleteTask = async (req, res) => {
+    try {
+        const { taskId } = req.params;
+
+        // 1. Validate task ID
+        if (!mongoose.Types.ObjectId.isValid(taskId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid task ID",
+            });
+        }
+
+        // 2. Find task
+        const task = await Task.findById(taskId);
+
+        if (!task) {
+            return res.status(404).json({
+                success: false,
+                message: "Task not found",
+            });
+        }
+
+        // 3. Find related project
+        const project = await Project.findById(task.project);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        // 4. Only project owner can delete
+        if (project.owner.toString() !== req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "Only the project owner can delete tasks",
+            });
+        }
+
+        // 5. Delete task
+        await Task.findByIdAndDelete(taskId);
+
+        // 6. Success response
+        return res.status(200).json({
+            success: true,
+            message: "Task deleted successfully",
+        });
+    } catch (error) {
+        console.error("Delete task error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
 module.exports = {
     createTask,
     getProjectTasks,
     updateTask,
+    deleteTask,
 };
