@@ -6,6 +6,7 @@ const {
     sendJoinRequest,
     getProjectJoinRequests,
     acceptJoinRequest,
+    rejectJoinRequest,
 } = require("../controllers/joinRequestController");
 
 const router = express.Router();
@@ -26,6 +27,12 @@ router.put(
     "/join-requests/:requestId/accept",
     protect,
     acceptJoinRequest
+);
+
+router.put(
+    "/join-requests/:requestId/reject",
+    protect,
+    rejectJoinRequest
 );
 
 module.exports = router;

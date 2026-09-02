@@ -287,8 +287,79 @@ const acceptJoinRequest = async (req, res) => {
         await session.endSession();
     }
 };
+
+const rejectJoinRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+
+        // 1. Validate request ID
+        if (!mongoose.Types.ObjectId.isValid(requestId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid request ID",
+            });
+        }
+
+        // 2. Find join request
+        const joinRequest = await JoinRequest.findById(requestId);
+
+        if (!joinRequest) {
+            return res.status(404).json({
+                success: false,
+                message: "Join request not found",
+            });
+        }
+
+        // 3. Find the related project
+        const project = await Project.findById(joinRequest.project);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        // 4. Only project owner can reject
+        if (project.owner.toString() !== req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "Only the project owner can reject requests",
+            });
+        }
+
+        // 5. Request must still be pending
+        if (joinRequest.status !== "pending") {
+            return res.status(409).json({
+                success: false,
+                message: "This request has already been reviewed",
+            });
+        }
+
+        // 6. Update request status
+        joinRequest.status = "rejected";
+        joinRequest.reviewedAt = new Date();
+
+        await joinRequest.save();
+
+        // 7. Success response
+        return res.status(200).json({
+            success: true,
+            message: "Join request rejected successfully",
+            joinRequest,
+        });
+    } catch (error) {
+        console.error("Reject join request error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
 module.exports = {
     sendJoinRequest,
     getProjectJoinRequests,
     acceptJoinRequest,
+    rejectJoinRequest,
 };
