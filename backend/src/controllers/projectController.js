@@ -59,14 +59,54 @@ const createProject = async (req, res) => {
 
 const getProjects = async (req, res) => {
     try {
-        const projects = await Project.find({
+        const { search } = req.query;
+
+        const query = {
             $expr: {
                 $lt: [
                     { $size: "$members" },
-                    "$maxTeamSize"
-                ]
-            }
-        })
+                    "$maxTeamSize",
+                ],
+            },
+        };
+
+        // Add search condition only when search is provided
+        if (search && search.trim() !== "") {
+            query.$or = [
+                {
+                    title: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    description: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    category: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    technologies: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    requiredSkills: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+            ];
+        }
+
+        const projects = await Project.find(query)
             .populate("owner", "name email profileImage")
             .sort({ createdAt: -1 });
 
