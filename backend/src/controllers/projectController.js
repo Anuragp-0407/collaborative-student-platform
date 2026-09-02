@@ -59,7 +59,22 @@ const createProject = async (req, res) => {
 
 const getProjects = async (req, res) => {
     try {
-        const { search } = req.query;
+        const {
+            search,
+            category,
+            technology,
+            skill,
+            page = 1,
+            limit = 10,
+        } = req.query;
+
+        const pageNumber = Math.max(parseInt(page) || 1, 1);
+        const limitNumber = Math.min(
+            Math.max(parseInt(limit) || 10, 1),
+            50
+        );
+
+        const skip = (pageNumber - 1) * limitNumber;
 
         const query = {
             $expr: {
@@ -70,7 +85,7 @@ const getProjects = async (req, res) => {
             },
         };
 
-        // Add search condition only when search is provided
+        // Search
         if (search && search.trim() !== "") {
             query.$or = [
                 {
@@ -106,13 +121,55 @@ const getProjects = async (req, res) => {
             ];
         }
 
+        // Category filter
+        if (category && category.trim() !== "") {
+            query.category = {
+                $regex: category.trim(),
+                $options: "i",
+            };
+        }
+
+        // Technology filter
+        if (technology && technology.trim() !== "") {
+            query.technologies = {
+                $regex: technology.trim(),
+                $options: "i",
+            };
+        }
+
+        // Skill filter
+        if (skill && skill.trim() !== "") {
+            query.requiredSkills = {
+                $regex: skill.trim(),
+                $options: "i",
+            };
+        }
+
+        // Count matching projects
+        const totalProjects = await Project.countDocuments(query);
+
+        // Get projects for current page
         const projects = await Project.find(query)
             .populate("owner", "name email profileImage")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNumber);
+
+        const totalPages = Math.ceil(
+            totalProjects / limitNumber
+        );
 
         res.status(200).json({
             success: true,
             count: projects.length,
+            pagination: {
+                currentPage: pageNumber,
+                limit: limitNumber,
+                totalProjects,
+                totalPages,
+                hasNextPage: pageNumber < totalPages,
+                hasPreviousPage: pageNumber > 1,
+            },
             projects,
         });
     } catch (error) {
