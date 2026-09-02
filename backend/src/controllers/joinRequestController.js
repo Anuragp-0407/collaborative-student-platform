@@ -91,6 +91,55 @@ const sendJoinRequest = async (req, res) => {
     }
 };
 
+const getProjectJoinRequests = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        const project = await Project.findById(projectId);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        if (project.owner.toString() !== req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to view these requests",
+            });
+        }
+
+        const joinRequests = await JoinRequest.find({
+            project: projectId,
+        })
+            .populate("requester", "name email profileImage skills interests")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: joinRequests.length,
+            joinRequests,
+        });
+    } catch (error) {
+        console.error("Get join requests error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     sendJoinRequest,
+    getProjectJoinRequests,
 };
