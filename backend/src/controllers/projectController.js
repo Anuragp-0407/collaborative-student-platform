@@ -59,7 +59,14 @@ const createProject = async (req, res) => {
 
 const getProjects = async (req, res) => {
     try {
-        const projects = await Project.find()
+        const projects = await Project.find({
+            $expr: {
+                $lt: [
+                    { $size: "$members" },
+                    "$maxTeamSize"
+                ]
+            }
+        })
             .populate("owner", "name email profileImage")
             .sort({ createdAt: -1 });
 
