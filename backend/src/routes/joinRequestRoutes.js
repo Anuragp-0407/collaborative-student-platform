@@ -5,6 +5,7 @@ const protect = require("../middleware/authMiddleware");
 const {
     sendJoinRequest,
     getProjectJoinRequests,
+    getMyJoinRequests,
     acceptJoinRequest,
     rejectJoinRequest,
 } = require("../controllers/joinRequestController");
@@ -21,6 +22,12 @@ router.get(
     "/projects/:projectId/join-requests",
     protect,
     getProjectJoinRequests
+);
+
+router.get(
+    "/my/join-requests",
+    protect,
+    getMyJoinRequests
 );
 
 router.put(

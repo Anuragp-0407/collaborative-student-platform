@@ -357,9 +357,40 @@ const rejectJoinRequest = async (req, res) => {
         });
     }
 };
+
+const getMyJoinRequests = async (req, res) => {
+    try {
+        const joinRequests = await JoinRequest.find({
+            requester: req.user.userId,
+        })
+            .populate(
+                "project",
+                "title description category technologies owner status"
+            )
+            .populate(
+                "project.owner",
+                "name email profileImage"
+            )
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: joinRequests.length,
+            joinRequests,
+        });
+    } catch (error) {
+        console.error("Get my join requests error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
 module.exports = {
     sendJoinRequest,
     getProjectJoinRequests,
     acceptJoinRequest,
     rejectJoinRequest,
+    getMyJoinRequests,
 };

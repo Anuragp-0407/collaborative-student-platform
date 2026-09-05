@@ -218,6 +218,55 @@ const getProjectById = async (req, res) => {
     }
 };
 
+const getMyProjects = async (req, res) => {
+    try {
+        const projects = await Project.find({
+            owner: req.user.userId,
+        })
+            .populate("owner", "name email profileImage")
+            .populate("members.user", "name email profileImage")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: projects.length,
+            projects,
+        });
+    } catch (error) {
+        console.error("Get my projects error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
+const getJoinedProjects = async (req, res) => {
+    try {
+        const projects = await Project.find({
+            "members.user": req.user.userId,
+            owner: { $ne: req.user.userId },
+        })
+            .populate("owner", "name email profileImage")
+            .populate("members.user", "name email profileImage")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: projects.length,
+            projects,
+        });
+    } catch (error) {
+        console.error("Get joined projects error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 const updateProject = async (req, res) => {
     try {
         const { id } = req.params;
@@ -326,6 +375,8 @@ module.exports = {
     createProject,
     getProjects,
     getProjectById,
+    getMyProjects,
+    getJoinedProjects,
     updateProject,
     deleteProject,
 };
