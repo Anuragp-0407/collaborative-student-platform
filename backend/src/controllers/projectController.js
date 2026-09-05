@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
+const Task = require("../models/Task");
 
 const createProject = async (req, res) => {
     try {
@@ -267,6 +268,182 @@ const getJoinedProjects = async (req, res) => {
     }
 };
 
+const leaveProject = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const userId = req.user.userId;
+
+        // Validate project ID
+        if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        // Find project
+        const project = await Project.findById(projectId);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        // Owner cannot leave their own project
+        if (project.owner.toString() === userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Project owner cannot leave the project",
+            });
+        }
+
+        // Check if user is a member
+        const isMember = project.members.some(
+            (member) => member.user.toString() === userId
+        );
+
+        if (!isMember) {
+            return res.status(400).json({
+                success: false,
+                message: "You are not a member of this project",
+            });
+        }
+
+        // Remove user from project members
+        project.members = project.members.filter(
+            (member) => member.user.toString() !== userId
+        );
+
+        // Unassign tasks belonging to this project
+        // that were assigned to the leaving member
+        await Task.updateMany(
+            {
+                project: projectId,
+                assignedTo: userId,
+            },
+            {
+                $set: {
+                    assignedTo: null,
+                },
+            }
+        );
+
+        await project.save();
+
+        res.status(200).json({
+            success: true,
+            message: "You left the project successfully",
+            project,
+        });
+    } catch (error) {
+        console.error("Leave project error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
+const removeProjectMember = async (req, res) => {
+    try {
+        const { projectId, userId } = req.params;
+        const ownerId = req.user.userId;
+
+        // Validate project ID
+        if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        // Validate member user ID
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user ID",
+            });
+        }
+
+        // Find project
+        const project = await Project.findById(projectId);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        // Only project owner can remove members
+        if (project.owner.toString() !== ownerId) {
+            return res.status(403).json({
+                success: false,
+                message: "Only the project owner can remove members",
+            });
+        }
+
+        // Owner cannot remove themselves
+        if (userId === ownerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Project owner cannot remove themselves",
+            });
+        }
+
+        // Check if target user is a member
+        const isMember = project.members.some(
+            (member) => member.user.toString() === userId
+        );
+
+        if (!isMember) {
+            return res.status(404).json({
+                success: false,
+                message: "User is not a member of this project",
+            });
+        }
+
+        // Remove member from project
+        project.members = project.members.filter(
+            (member) => member.user.toString() !== userId
+        );
+
+        // Unassign tasks belonging to the removed member
+        await Task.updateMany(
+            {
+                project: projectId,
+                assignedTo: userId,
+            },
+            {
+                $set: {
+                    assignedTo: null,
+                },
+            }
+        );
+
+        await project.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Project member removed successfully",
+            project,
+        });
+    } catch (error) {
+        console.error(
+            "Remove project member error:",
+            error.message
+        );
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 const updateProject = async (req, res) => {
     try {
         const { id } = req.params;
@@ -377,6 +554,8 @@ module.exports = {
     getProjectById,
     getMyProjects,
     getJoinedProjects,
+    leaveProject,
+    removeProjectMember,
     updateProject,
     deleteProject,
 };
