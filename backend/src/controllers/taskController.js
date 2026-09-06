@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Task = require("../models/Task");
+const { createNotification } = require("../services/notificationService");
 
 const createTask = async (req, res) => {
     try {
@@ -224,6 +225,11 @@ const updateTask = async (req, res) => {
             });
         }
 
+        // Store previous assignee
+        const previousAssignedTo = task.assignedTo
+            ? task.assignedTo.toString()
+            : null;
+
         // 6. Validate assigned user if provided
         if (assignedTo !== undefined && assignedTo !== null) {
             if (!mongoose.Types.ObjectId.isValid(assignedTo)) {
@@ -273,7 +279,28 @@ const updateTask = async (req, res) => {
         // 8. Save with schema validation
         await task.save();
 
-        // 9. Populate assigned user in response
+        // Check whether assignment actually changed
+        const newAssignedTo = task.assignedTo
+            ? task.assignedTo.toString()
+            : null;
+
+        const assignmentChanged =
+            assignedTo !== undefined &&
+            previousAssignedTo !== newAssignedTo;
+
+        // 9. Create notification for newly assigned user
+        if (assignmentChanged && newAssignedTo) {
+            await createNotification({
+                recipient: newAssignedTo,
+                type: "task_assigned",
+                title: "Task Assigned",
+                message: `You have been assigned the task "${task.title}"`,
+                project: project._id,
+                task: task._id,
+            });
+        }
+
+        // 10. Populate assigned user in response
         await task.populate(
             "assignedTo",
             "name email profileImage"
@@ -301,7 +328,6 @@ const updateTask = async (req, res) => {
         });
     }
 };
-
 const deleteTask = async (req, res) => {
     try {
         const { taskId } = req.params;

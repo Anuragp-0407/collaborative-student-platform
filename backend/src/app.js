@@ -6,6 +6,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const joinRequestRoutes = require("./routes/joinRequestRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api", joinRequestRoutes);
 app.use("/api", taskRoutes);
 app.use("/api", messageRoutes);
+app.use("/api/notifications",notificationRoutes);
 
 app.get("/api/health", (req, res) => {
     res.status(200).json({

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const JoinRequest = require("../models/joinRequest");
+const { createNotification } = require("../services/notificationService");
 
 const sendJoinRequest = async (req, res) => {
     try {
@@ -76,7 +77,16 @@ const sendJoinRequest = async (req, res) => {
             message: message || "",
         });
 
-        res.status(201).json({
+        // 8. Create notification for project owner
+        await createNotification({
+            recipient: project.owner,
+            type: "join_request",
+            title: "New Join Request",
+            message: `Someone has requested to join your project "${project.title}"`,
+            project: project._id,
+        });
+
+        return res.status(201).json({
             success: true,
             message: "Join request sent successfully",
             joinRequest,
@@ -84,7 +94,7 @@ const sendJoinRequest = async (req, res) => {
     } catch (error) {
         console.error("Send join request error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });
@@ -124,7 +134,7 @@ const getProjectJoinRequests = async (req, res) => {
             .populate("requester", "name email profileImage skills interests")
             .sort({ createdAt: -1 });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             count: joinRequests.length,
             joinRequests,
@@ -132,7 +142,7 @@ const getProjectJoinRequests = async (req, res) => {
     } catch (error) {
         console.error("Get join requests error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });
@@ -154,6 +164,7 @@ const acceptJoinRequest = async (req, res) => {
         }
 
         let acceptedRequest;
+        let acceptedProjectTitle;
 
         // 2. Start transaction
         await session.withTransaction(async () => {
@@ -176,7 +187,6 @@ const acceptJoinRequest = async (req, res) => {
             }
 
             // 5. Check authorization FIRST
-            // Only project owner can accept requests
             if (project.owner.toString() !== req.user.userId) {
                 throw new Error("NOT_PROJECT_OWNER");
             }
@@ -187,7 +197,6 @@ const acceptJoinRequest = async (req, res) => {
             }
 
             // 7. Defensive check
-            // Make sure requester is not already a member
             const isAlreadyMember = project.members.some(
                 (member) =>
                     member.user.toString() ===
@@ -202,6 +211,9 @@ const acceptJoinRequest = async (req, res) => {
             if (project.members.length >= project.maxTeamSize) {
                 throw new Error("TEAM_FULL");
             }
+
+            // Store project title before leaving transaction
+            acceptedProjectTitle = project.title;
 
             // 9. Add requester to project members
             project.members.push({
@@ -220,7 +232,16 @@ const acceptJoinRequest = async (req, res) => {
             acceptedRequest = joinRequest;
         });
 
-        // 12. Success response
+        // 12. Create notification for requester
+        await createNotification({
+            recipient: acceptedRequest.requester,
+            type: "join_request_accepted",
+            title: "Join Request Accepted",
+            message: `Your request to join "${acceptedProjectTitle}" was accepted`,
+            project: acceptedRequest.project,
+        });
+
+        // 13. Success response
         return res.status(200).json({
             success: true,
             message: "Join request accepted successfully",
@@ -229,7 +250,6 @@ const acceptJoinRequest = async (req, res) => {
     } catch (error) {
         console.error("Accept join request error:", error.message);
 
-        // Join request doesn't exist
         if (error.message === "JOIN_REQUEST_NOT_FOUND") {
             return res.status(404).json({
                 success: false,
@@ -237,7 +257,6 @@ const acceptJoinRequest = async (req, res) => {
             });
         }
 
-        // Project doesn't exist
         if (error.message === "PROJECT_NOT_FOUND") {
             return res.status(404).json({
                 success: false,
@@ -245,7 +264,6 @@ const acceptJoinRequest = async (req, res) => {
             });
         }
 
-        // User is not project owner
         if (error.message === "NOT_PROJECT_OWNER") {
             return res.status(403).json({
                 success: false,
@@ -253,7 +271,6 @@ const acceptJoinRequest = async (req, res) => {
             });
         }
 
-        // Request was already accepted/rejected
         if (error.message === "REQUEST_ALREADY_REVIEWED") {
             return res.status(409).json({
                 success: false,
@@ -261,7 +278,6 @@ const acceptJoinRequest = async (req, res) => {
             });
         }
 
-        // Requester already belongs to project
         if (error.message === "ALREADY_MEMBER") {
             return res.status(400).json({
                 success: false,
@@ -269,7 +285,6 @@ const acceptJoinRequest = async (req, res) => {
             });
         }
 
-        // Team has reached maximum size
         if (error.message === "TEAM_FULL") {
             return res.status(409).json({
                 success: false,
@@ -277,13 +292,11 @@ const acceptJoinRequest = async (req, res) => {
             });
         }
 
-        // Unexpected server error
         return res.status(500).json({
             success: false,
             message: "Server error",
         });
     } finally {
-        // Always close the MongoDB session
         await session.endSession();
     }
 };
@@ -342,7 +355,16 @@ const rejectJoinRequest = async (req, res) => {
 
         await joinRequest.save();
 
-        // 7. Success response
+        // 7. Create notification for requester
+        await createNotification({
+            recipient: joinRequest.requester,
+            type: "join_request_rejected",
+            title: "Join Request Rejected",
+            message: `Your request to join "${project.title}" was rejected`,
+            project: project._id,
+        });
+
+        // 8. Success response
         return res.status(200).json({
             success: true,
             message: "Join request rejected successfully",
@@ -373,7 +395,7 @@ const getMyJoinRequests = async (req, res) => {
             )
             .sort({ createdAt: -1 });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             count: joinRequests.length,
             joinRequests,
@@ -381,12 +403,13 @@ const getMyJoinRequests = async (req, res) => {
     } catch (error) {
         console.error("Get my join requests error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });
     }
 };
+
 module.exports = {
     sendJoinRequest,
     getProjectJoinRequests,

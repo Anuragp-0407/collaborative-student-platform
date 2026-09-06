@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Task = require("../models/Task");
+const { createNotification } = require("../services/notificationService");
 
 const createProject = async (req, res) => {
     try {
@@ -424,9 +425,19 @@ const removeProjectMember = async (req, res) => {
             }
         );
 
+        // Save project changes
         await project.save();
 
-        res.status(200).json({
+        // Create notification for removed member
+        await createNotification({
+            recipient: userId,
+            type: "member_removed",
+            title: "Removed From Project",
+            message: `You have been removed from the project "${project.title}"`,
+            project: project._id,
+        });
+
+        return res.status(200).json({
             success: true,
             message: "Project member removed successfully",
             project,
@@ -437,7 +448,7 @@ const removeProjectMember = async (req, res) => {
             error.message
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });

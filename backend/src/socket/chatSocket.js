@@ -33,6 +33,15 @@ const setupChatSocket = (io) => {
         console.log("User connected:", socket.id);
         console.log("User ID:", socket.user.userId);
 
+        // Join personal notification room
+        const notificationRoom = `user:${socket.user.userId}`;
+
+        socket.join(notificationRoom);
+
+        console.log(
+            `User ${socket.user.userId} joined notification room ${notificationRoom}`
+        );
+
         // Join project-specific chat room
         socket.on("joinProjectRoom", async (projectId, callback) => {
             try {
