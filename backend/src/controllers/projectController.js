@@ -559,6 +559,86 @@ const deleteProject = async (req, res) => {
     }
 };
 
+const updateProjectStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // 1. Validate project ID
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project ID",
+            });
+        }
+
+        // 2. Validate status
+        const allowedStatuses = [
+            "planning",
+            "active",
+            "completed",
+            "cancelled",
+        ];
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid project status",
+            });
+        }
+
+        // 3. Find project
+        const project = await Project.findById(id);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found",
+            });
+        }
+
+        // 4. Only project owner can change status
+        if (project.owner.toString() !== req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "Only the project owner can change project status",
+            });
+        }
+
+        // 5. Prevent changing status of completed/cancelled projects
+        if (
+            project.status === "completed" ||
+            project.status === "cancelled"
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot change status of a ${project.status} project`,
+            });
+        }
+
+        // 6. Update status
+        project.status = status;
+
+        await project.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Project status updated successfully",
+            project,
+        });
+    } catch (error) {
+        console.error(
+            "Update project status error:",
+            error.message
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     createProject,
     getProjects,
@@ -569,4 +649,5 @@ module.exports = {
     removeProjectMember,
     updateProject,
     deleteProject,
+    updateProjectStatus,
 };

@@ -12,6 +12,7 @@ const {
     removeProjectMember,
     updateProject,
     deleteProject,
+    updateProjectStatus,
 } = require("../controllers/projectController");
 
 const router = express.Router();
@@ -34,6 +35,12 @@ router.delete(
     "/:projectId/members/:userId",
     protect,
     removeProjectMember
+);
+
+router.put(
+    "/:id/status",
+    protect,
+    updateProjectStatus
 );
 
 router.get("/:id", protect, getProjectById);
