@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
-const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+
+const User = require("../models/User");
 
 const registerUser = async (req, res) => {
     try {
@@ -13,7 +14,11 @@ const registerUser = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({ email });
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const existingUser = await User.findOne({
+            email: normalizedEmail,
+        });
 
         if (existingUser) {
             return res.status(409).json({
@@ -25,14 +30,26 @@ const registerUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const user = await User.create({
-            name,
-            email,
+            name: name.trim(),
+            email: normalizedEmail,
             password: hashedPassword,
         });
 
-        res.status(201).json({
+        const token = jwt.sign(
+            {
+                userId: user._id,
+                role: user.role,
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d",
+            }
+        );
+
+        return res.status(201).json({
             success: true,
             message: "User registered successfully",
+            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -40,9 +57,9 @@ const registerUser = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Registration error:", error.message);
+        console.error("Register error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });
@@ -60,12 +77,16 @@ const loginUser = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email });
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const user = await User.findOne({
+            email: normalizedEmail,
+        });
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Invalid email or password",
+                message: "Email or password is invalid",
             });
         }
 
@@ -77,7 +98,7 @@ const loginUser = async (req, res) => {
         if (!isPasswordValid) {
             return res.status(401).json({
                 success: false,
-                message: "Invalid email or password",
+                message: "Email or password is invalid",
             });
         }
 
@@ -92,7 +113,7 @@ const loginUser = async (req, res) => {
             }
         );
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Login successful",
             token,
@@ -105,7 +126,7 @@ const loginUser = async (req, res) => {
     } catch (error) {
         console.error("Login error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });
