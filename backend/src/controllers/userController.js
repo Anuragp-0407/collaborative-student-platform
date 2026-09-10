@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const Project = require("../models/Project");
+const Task = require("../models/Task");
 
 const getCurrentUser = async (req, res) => {
     try {
@@ -24,6 +26,7 @@ const getCurrentUser = async (req, res) => {
         });
     }
 };
+
 const updateProfile = async (req, res) => {
     try {
         const allowedFields = [
@@ -74,7 +77,57 @@ const updateProfile = async (req, res) => {
         });
     }
 };
+
+const getDashboardStats = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        const [myProjects, joinedProjects, myTasks, user] =
+            await Promise.all([
+                Project.countDocuments({
+                    owner: userId,
+                }),
+
+                Project.countDocuments({
+                    "members.user": userId,
+                    owner: { $ne: userId },
+                }),
+
+                Task.countDocuments({
+                    assignedTo: userId,
+                }),
+
+                User.findById(userId).select("experiencePoints"),
+            ]);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            stats: {
+                myProjects,
+                joinedProjects,
+                myTasks,
+                experiencePoints: user.experiencePoints,
+            },
+        });
+    } catch (error) {
+        console.error("Get dashboard stats error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     getCurrentUser,
     updateProfile,
+    getDashboardStats,
 };
