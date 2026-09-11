@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
+import CreateProject from "../pages/CreateProject";
+
 import ProtectedRoute from "./ProtectedRoute";
 import useAuth from "../hooks/useAuth";
 
@@ -31,6 +33,11 @@ function AppRoutes() {
                     <Route
                         path="/dashboard"
                         element={<Dashboard />}
+                    />
+
+                    <Route
+                        path="/projects/create"
+                        element={<CreateProject />}
                     />
                 </Route>
 
