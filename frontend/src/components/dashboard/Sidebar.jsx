@@ -14,7 +14,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import useAuth from "../../hooks/useAuth";
 
-const Sidebar = () => {
+const Sidebar = ({ mobile = false }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -60,7 +60,11 @@ const Sidebar = () => {
     ];
 
     return (
-        <aside className="group/sidebar fixed inset-y-0 left-0 z-50 hidden w-72 flex-col border-r border-white/[0.06] bg-[#090714]/95 backdrop-blur-2xl lg:flex">
+        <aside
+            className={`group/sidebar fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-white/[0.06] bg-[#090714]/95 backdrop-blur-2xl ${
+                mobile ? "flex" : "hidden lg:flex"
+            }`}
+        >
             {/* Background glow */}
             <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-violet-600/[0.07] blur-3xl" />
 

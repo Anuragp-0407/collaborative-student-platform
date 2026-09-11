@@ -22,7 +22,7 @@ const DashboardLayout = ({ children }) => {
             {/* Mobile Sidebar */}
             {mobileMenuOpen && (
                 <div className="fixed inset-y-0 left-0 z-50 w-72 lg:hidden">
-                    <Sidebar />
+                    <Sidebar mobile />
                 </div>
             )}
 
