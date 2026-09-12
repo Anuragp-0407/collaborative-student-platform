@@ -15,10 +15,12 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import StatCard from "../components/dashboard/StatCard";
 
 import useAuth from "../hooks/useAuth";
+
 import { getDashboardStats } from "../services/dashboardService";
 
 const Dashboard = () => {
     const { user } = useAuth();
+
     const navigate = useNavigate();
 
     const [stats, setStats] = useState({
@@ -57,6 +59,10 @@ const Dashboard = () => {
         loadDashboardStats();
     }, []);
 
+    const openMyProjects = () => {
+        navigate("/projects");
+    };
+
     return (
         <DashboardLayout>
             <div className="mx-auto max-w-[1600px]">
@@ -77,6 +83,7 @@ const Dashboard = () => {
 
                                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                                     Welcome back,
+
                                     <span className="block bg-gradient-to-r from-violet-300 via-fuchsia-400 to-violet-500 bg-clip-text text-transparent">
                                         {user?.name || "Student"}.
                                     </span>
@@ -136,7 +143,11 @@ const Dashboard = () => {
                     <div className="animate-fade-up [animation-delay:100ms]">
                         <StatCard
                             label="My Projects"
-                            value={loading ? "—" : stats.myProjects}
+                            value={
+                                loading
+                                    ? "—"
+                                    : stats.myProjects
+                            }
                             description="Projects you own"
                             icon={FolderKanban}
                             accent="violet"
@@ -160,7 +171,11 @@ const Dashboard = () => {
                     <div className="animate-fade-up [animation-delay:300ms]">
                         <StatCard
                             label="My Tasks"
-                            value={loading ? "—" : stats.myTasks}
+                            value={
+                                loading
+                                    ? "—"
+                                    : stats.myTasks
+                            }
                             description="Tasks assigned to you"
                             icon={CheckSquare}
                             accent="cyan"
@@ -185,7 +200,21 @@ const Dashboard = () => {
                 {/* Main content */}
                 <section className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
                     {/* My Projects */}
-                    <div className="animate-fade-up rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 sm:p-6">
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={openMyProjects}
+                        onKeyDown={(event) => {
+                            if (
+                                event.key === "Enter" ||
+                                event.key === " "
+                            ) {
+                                event.preventDefault();
+                                openMyProjects();
+                            }
+                        }}
+                        className="group animate-fade-up cursor-pointer rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/20 hover:bg-white/[0.035] sm:p-6"
+                    >
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-violet-400/60">
@@ -199,12 +228,14 @@ const Dashboard = () => {
 
                             <button
                                 type="button"
-                                onClick={() =>
-                                    navigate("/projects")
-                                }
-                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/[0.08] hover:text-violet-200"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    openMyProjects();
+                                }}
+                                className="flex cursor-pointer items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/[0.08] hover:text-violet-200"
                             >
                                 View all
+                                <ArrowRight size={13} />
                             </button>
                         </div>
 
@@ -234,15 +265,30 @@ const Dashboard = () => {
                                     : "Create your first project or discover an existing idea to start collaborating."}
                             </p>
 
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    navigate("/projects/create")
-                                }
-                                className="mt-5 cursor-pointer rounded-lg border border-violet-400/15 bg-violet-500/[0.06] px-4 py-2 text-xs font-semibold text-violet-300 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/30 hover:bg-violet-500/[0.1]"
-                            >
-                                Create your first project
-                            </button>
+                            {stats.myProjects > 0 ? (
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMyProjects();
+                                    }}
+                                    className="mt-5 flex cursor-pointer items-center gap-2 rounded-lg border border-violet-400/15 bg-violet-500/[0.06] px-4 py-2 text-xs font-semibold text-violet-300 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/30 hover:bg-violet-500/[0.1]"
+                                >
+                                    View My Projects
+                                    <ArrowRight size={13} />
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        navigate("/projects/create");
+                                    }}
+                                    className="mt-5 cursor-pointer rounded-lg border border-violet-400/15 bg-violet-500/[0.06] px-4 py-2 text-xs font-semibold text-violet-300 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/30 hover:bg-violet-500/[0.1]"
+                                >
+                                    Create your first project
+                                </button>
+                            )}
                         </div>
                     </div>
 

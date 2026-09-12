@@ -4,6 +4,7 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
 import CreateProject from "../pages/CreateProject";
+import MyProjects from "../pages/MyProjects";
 
 import ProtectedRoute from "./ProtectedRoute";
 import useAuth from "../hooks/useAuth";
@@ -24,9 +25,7 @@ function AppRoutes() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<RootRedirect />} />
-
                 <Route path="/login" element={<Login />} />
-
                 <Route path="/register" element={<Register />} />
 
                 <Route element={<ProtectedRoute />}>
@@ -38,6 +37,11 @@ function AppRoutes() {
                     <Route
                         path="/projects/create"
                         element={<CreateProject />}
+                    />
+
+                    <Route
+                        path="/projects"
+                        element={<MyProjects />}
                     />
                 </Route>
 
