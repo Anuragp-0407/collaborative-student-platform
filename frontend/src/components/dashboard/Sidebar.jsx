@@ -27,7 +27,7 @@ const Sidebar = ({ mobile = false }) => {
         {
             label: "Discover Projects",
             icon: Search,
-            path: "/projects/discover",
+            path: "/discover",
         },
         {
             label: "My Projects",

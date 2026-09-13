@@ -9,11 +9,16 @@ import {
     AlertCircle,
     MessageCircle,
     CheckSquare,
+    Send,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
-import { getProjectById } from "../services/projectService";
+import {
+    getProjectById,
+    getMyJoinRequests,
+    sendJoinRequest,
+} from "../services/projectService";
 
 const ProjectDetails = () => {
     const navigate = useNavigate();
@@ -23,6 +28,13 @@ const ProjectDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [joinRequestStatus, setJoinRequestStatus] =
+        useState(null);
+
+    const [joinLoading, setJoinLoading] = useState(false);
+    const [joinError, setJoinError] = useState("");
+    const [joinSuccess, setJoinSuccess] = useState("");
+
     useEffect(() => {
         const fetchProject = async () => {
             try {
@@ -30,7 +42,6 @@ const ProjectDetails = () => {
                 setError("");
 
                 const data = await getProjectById(projectId);
-
                 setProject(data.project);
             } catch (error) {
                 console.error(
@@ -50,6 +61,34 @@ const ProjectDetails = () => {
         fetchProject();
     }, [projectId]);
 
+    useEffect(() => {
+        const fetchJoinRequestStatus = async () => {
+            try {
+                const data = await getMyJoinRequests();
+
+                const currentRequest =
+                    data.joinRequests?.find(
+                        (request) =>
+                            request.project?._id === projectId ||
+                            request.project === projectId
+                    );
+
+                if (currentRequest) {
+                    setJoinRequestStatus(
+                        currentRequest.status
+                    );
+                }
+            } catch (error) {
+                console.error(
+                    "Get join request status error:",
+                    error.message
+                );
+            }
+        };
+
+        fetchJoinRequestStatus();
+    }, [projectId]);
+
     const getStatusStyles = (status) => {
         const styles = {
             planning:
@@ -67,6 +106,119 @@ const ProjectDetails = () => {
             "border-white/10 bg-white/[0.05] text-white/50"
         );
     };
+
+    const getUserId = () => {
+        try {
+            const storedUser = localStorage.getItem("user");
+
+            if (!storedUser) {
+                return null;
+            }
+
+            const parsedUser = JSON.parse(storedUser);
+
+            return parsedUser?._id || parsedUser?.id || null;
+        } catch (error) {
+            console.error(
+                "Get stored user error:",
+                error.message
+            );
+
+            return null;
+        }
+    };
+
+    const getOwnerId = () => {
+        if (!project?.owner) {
+            return null;
+        }
+
+        return project.owner?._id || project.owner;
+    };
+
+    const currentUserId = getUserId();
+    const ownerId = getOwnerId();
+
+    const isOwner =
+        currentUserId &&
+        ownerId &&
+        currentUserId.toString() === ownerId.toString();
+
+    const isMember =
+        project?.members?.some((member) => {
+            const memberId =
+                member.user?._id || member.user;
+
+            return (
+                currentUserId &&
+                memberId &&
+                currentUserId.toString() ===
+                    memberId.toString()
+            );
+        }) || false;
+
+    const isTeamFull =
+        project?.members?.length >= project?.maxTeamSize;
+
+    const handleJoinRequest = async () => {
+        try {
+            setJoinLoading(true);
+            setJoinError("");
+            setJoinSuccess("");
+
+            const data = await sendJoinRequest(projectId);
+
+            setJoinRequestStatus(
+                data.joinRequest?.status || "pending"
+            );
+
+            setJoinSuccess(
+                data.message ||
+                    "Join request sent successfully."
+            );
+        } catch (error) {
+            console.error(
+                "Send join request error:",
+                error.message
+            );
+
+            setJoinError(
+                error.response?.data?.message ||
+                    "Unable to send join request."
+            );
+        } finally {
+            setJoinLoading(false);
+        }
+    };
+
+    const getJoinButtonContent = () => {
+        if (isOwner) {
+            return "Project Owner";
+        }
+
+        if (isMember) {
+            return "You're a Member";
+        }
+
+        if (isTeamFull) {
+            return "Team Full";
+        }
+
+        if (joinRequestStatus === "pending") {
+            return "Request Sent";
+        }
+
+        return joinLoading
+            ? "Sending..."
+            : "Request to Join";
+    };
+
+    const isJoinDisabled =
+        isOwner ||
+        isMember ||
+        isTeamFull ||
+        joinRequestStatus === "pending" ||
+        joinLoading;
 
     if (loading) {
         return (
@@ -103,11 +255,11 @@ const ProjectDetails = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate("/projects")}
+                        onClick={() => navigate("/discover")}
                         className="mt-5 flex cursor-pointer items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 py-3 text-xs font-bold text-white/50 transition-all duration-300 hover:border-violet-400/20 hover:bg-violet-500/[0.06] hover:text-violet-300"
                     >
                         <ArrowLeft size={15} />
-                        Back to My Projects
+                        Back to Discover
                     </button>
                 </div>
             </DashboardLayout>
@@ -120,14 +272,14 @@ const ProjectDetails = () => {
                 {/* Back */}
                 <button
                     type="button"
-                    onClick={() => navigate("/projects")}
+                    onClick={() => navigate("/discover")}
                     className="group mb-5 flex cursor-pointer items-center gap-2 text-xs font-semibold text-white/35 transition-colors duration-300 hover:text-violet-300"
                 >
                     <ArrowLeft
                         size={15}
                         className="transition-transform duration-300 group-hover:-translate-x-1"
                     />
-                    Back to My Projects
+                    Back to Discover
                 </button>
 
                 {/* Project Header */}
@@ -176,8 +328,10 @@ const ProjectDetails = () => {
                                 />
 
                                 <span className="text-xs text-white/45">
-                                    {project.members?.length || 0} /{" "}
-                                    {project.maxTeamSize} members
+                                    {project.members?.length ||
+                                        0}{" "}
+                                    / {project.maxTeamSize}{" "}
+                                    members
                                 </span>
                             </div>
 
@@ -191,6 +345,36 @@ const ProjectDetails = () => {
                                     {project.category}
                                 </span>
                             </div>
+                        </div>
+
+                        {/* Join Request Action */}
+                        <div className="mt-6">
+                            <button
+                                type="button"
+                                disabled={isJoinDisabled}
+                                onClick={handleJoinRequest}
+                                className={`flex cursor-pointer items-center gap-2 rounded-xl px-5 py-3 text-xs font-bold transition-all duration-300 ${
+                                    isJoinDisabled
+                                        ? "cursor-not-allowed border border-white/[0.08] bg-white/[0.03] text-white/30"
+                                        : "border border-violet-400/20 bg-violet-500/[0.12] text-violet-300 hover:border-violet-400/30 hover:bg-violet-500/[0.18]"
+                                }`}
+                            >
+                                <Send size={14} />
+
+                                {getJoinButtonContent()}
+                            </button>
+
+                            {joinSuccess && (
+                                <p className="mt-3 text-xs text-emerald-300">
+                                    {joinSuccess}
+                                </p>
+                            )}
+
+                            {joinError && (
+                                <p className="mt-3 text-xs text-red-300">
+                                    {joinError}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -266,13 +450,15 @@ const ProjectDetails = () => {
                                     </h2>
 
                                     <p className="mt-0.5 text-[11px] text-white/25">
-                                        Technologies used in this project.
+                                        Technologies used in this
+                                        project.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mt-5 flex flex-wrap gap-2">
-                                {project.technologies?.length > 0 ? (
+                                {project.technologies?.length >
+                                0 ? (
                                     project.technologies.map(
                                         (technology) => (
                                             <span
@@ -285,7 +471,8 @@ const ProjectDetails = () => {
                                     )
                                 ) : (
                                     <p className="text-xs text-white/25">
-                                        No technologies specified.
+                                        No technologies
+                                        specified.
                                     </p>
                                 )}
                             </div>
@@ -306,13 +493,15 @@ const ProjectDetails = () => {
                                     </h2>
 
                                     <p className="mt-0.5 text-[11px] text-white/25">
-                                        Skills needed for this project.
+                                        Skills needed for this
+                                        project.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mt-5 flex flex-wrap gap-2">
-                                {project.requiredSkills?.length > 0 ? (
+                                {project.requiredSkills
+                                    ?.length > 0 ? (
                                     project.requiredSkills.map(
                                         (skill) => (
                                             <span
@@ -325,7 +514,8 @@ const ProjectDetails = () => {
                                     )
                                 ) : (
                                     <p className="text-xs text-white/25">
-                                        No required skills specified.
+                                        No required skills
+                                        specified.
                                     </p>
                                 )}
                             </div>
@@ -341,7 +531,8 @@ const ProjectDetails = () => {
                                 </h2>
 
                                 <p className="mt-0.5 text-[11px] text-white/25">
-                                    People working on this project.
+                                    People working on this
+                                    project.
                                 </p>
                             </div>
 
@@ -361,7 +552,8 @@ const ProjectDetails = () => {
                                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-violet-400/15 bg-violet-500/[0.07] text-xs font-bold text-violet-300">
                                             {member.user?.name
                                                 ?.charAt(0)
-                                                ?.toUpperCase() || "U"}
+                                                ?.toUpperCase() ||
+                                                "U"}
                                         </div>
 
                                         <div className="min-w-0">
@@ -371,7 +563,8 @@ const ProjectDetails = () => {
                                             </p>
 
                                             <p className="truncate text-[10px] text-white/25">
-                                                {member.user?.email || ""}
+                                                {member.user?.email ||
+                                                    ""}
                                             </p>
                                         </div>
                                     </div>
@@ -386,7 +579,8 @@ const ProjectDetails = () => {
                 </section>
 
                 {/* Links */}
-                {(project.githubUrl || project.demoUrl) && (
+                {(project.githubUrl ||
+                    project.demoUrl) && (
                     <section className="mt-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 sm:p-6">
                         <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-400/15 bg-emerald-500/[0.07]">
@@ -402,7 +596,8 @@ const ProjectDetails = () => {
                                 </h2>
 
                                 <p className="mt-0.5 text-[11px] text-white/25">
-                                    External resources for this project.
+                                    External resources for this
+                                    project.
                                 </p>
                             </div>
                         </div>
@@ -418,7 +613,9 @@ const ProjectDetails = () => {
                                     <span className="text-[11px] font-bold">
                                         GH
                                     </span>
+
                                     GitHub
+
                                     <ExternalLink size={12} />
                                 </a>
                             )}

@@ -115,7 +115,7 @@ const Dashboard = () => {
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        navigate("/projects/discover")
+                                        navigate("/discover")
                                     }
                                     className="group flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.035] px-5 py-3 text-xs font-bold text-white/60 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/20 hover:bg-violet-500/[0.05] hover:text-violet-300"
                                 >
