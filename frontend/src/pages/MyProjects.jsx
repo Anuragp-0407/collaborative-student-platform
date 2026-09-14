@@ -6,16 +6,22 @@ import {
     Users,
     ArrowRight,
     AlertCircle,
+    UserRoundCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
-import { getMyProjects } from "../services/projectService";
+import {
+    getMyProjects,
+    getJoinedProjects,
+} from "../services/projectService";
 
 const MyProjects = () => {
     const navigate = useNavigate();
 
-    const [projects, setProjects] = useState([]);
+    const [myProjects, setMyProjects] = useState([]);
+    const [joinedProjects, setJoinedProjects] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -25,9 +31,19 @@ const MyProjects = () => {
                 setLoading(true);
                 setError("");
 
-                const data = await getMyProjects();
+                const [myProjectsData, joinedProjectsData] =
+                    await Promise.all([
+                        getMyProjects(),
+                        getJoinedProjects(),
+                    ]);
 
-                setProjects(data.projects || []);
+                setMyProjects(
+                    myProjectsData.projects || []
+                );
+
+                setJoinedProjects(
+                    joinedProjectsData.projects || []
+                );
             } catch (error) {
                 console.error(
                     "Get my projects error:",
@@ -50,10 +66,13 @@ const MyProjects = () => {
         const styles = {
             planning:
                 "border-amber-400/15 bg-amber-500/[0.07] text-amber-300",
+
             active:
                 "border-emerald-400/15 bg-emerald-500/[0.07] text-emerald-300",
+
             completed:
                 "border-cyan-400/15 bg-cyan-500/[0.07] text-cyan-300",
+
             cancelled:
                 "border-red-400/15 bg-red-500/[0.07] text-red-300",
         };
@@ -61,6 +80,99 @@ const MyProjects = () => {
         return (
             styles[status] ||
             "border-white/10 bg-white/[0.05] text-white/50"
+        );
+    };
+
+    const renderProjectCard = (project, index) => {
+        return (
+            <article
+                key={project._id}
+                className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/20 hover:bg-white/[0.035]"
+                style={{
+                    animationDelay: `${index * 80}ms`,
+                }}
+            >
+                <div className="pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-violet-600/[0.06] blur-3xl transition-all duration-500 group-hover:bg-violet-600/[0.1]" />
+
+                <div className="relative">
+                    {/* Category + Status */}
+                    <div className="flex items-start justify-between gap-3">
+                        <span className="rounded-lg border border-violet-400/10 bg-violet-500/[0.06] px-2.5 py-1 text-[10px] font-semibold text-violet-300/70">
+                            {project.category}
+                        </span>
+
+                        <span
+                            className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold capitalize ${getStatusStyles(
+                                project.status
+                            )}`}
+                        >
+                            {project.status}
+                        </span>
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="mt-5 line-clamp-2 text-base font-bold leading-6 text-white/90">
+                        {project.title}
+                    </h2>
+
+                    {/* Description */}
+                    <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/30">
+                        {project.description}
+                    </p>
+
+                    {/* Technologies */}
+                    {project.technologies?.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-1.5">
+                            {project.technologies
+                                .slice(0, 4)
+                                .map((technology) => (
+                                    <span
+                                        key={technology}
+                                        className="rounded-md border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[9px] text-white/35"
+                                    >
+                                        {technology}
+                                    </span>
+                                ))}
+
+                            {project.technologies.length >
+                                4 && (
+                                <span className="rounded-md border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[9px] text-white/25">
+                                    +
+                                    {project.technologies
+                                        .length - 4}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4">
+                        <div className="flex items-center gap-1.5 text-[10px] text-white/30">
+                            <Users size={13} />
+
+                            {project.members?.length || 0}{" "}
+                            / {project.maxTeamSize}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigate(
+                                    `/projects/${project._id}`
+                                )
+                            }
+                            className="flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-violet-300/70 transition-colors duration-300 hover:text-violet-300"
+                        >
+                            Open Project
+
+                            <ArrowRight
+                                size={13}
+                                className="transition-transform duration-300 group-hover:translate-x-0.5"
+                            />
+                        </button>
+                    </div>
+                </div>
+            </article>
         );
     };
 
@@ -87,8 +199,9 @@ const MyProjects = () => {
                             </h1>
 
                             <p className="mt-2 text-sm text-white/35">
-                                Manage the projects you've created and
-                                build them with your team.
+                                Manage the projects you've
+                                created and the projects you've
+                                joined.
                             </p>
                         </div>
 
@@ -110,6 +223,7 @@ const MyProjects = () => {
                     <div className="mt-8 flex min-h-64 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.025]">
                         <div className="flex items-center gap-3 text-sm text-white/40">
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400/20 border-t-violet-400" />
+
                             Loading your projects...
                         </div>
                     </div>
@@ -135,135 +249,156 @@ const MyProjects = () => {
                     </div>
                 )}
 
-                {/* Empty State */}
-                {!loading && !error && projects.length === 0 && (
-                    <div className="mt-8 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.025] px-6 text-center">
-                        <div className="relative">
-                            <div className="absolute inset-0 rounded-2xl bg-violet-500/10 blur-xl" />
+                {/* Content */}
+                {!loading && !error && (
+                    <>
+                        {/* Created Projects */}
+                        <section className="mt-8">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="flex items-center gap-2 text-lg font-bold">
+                                        <Rocket
+                                            size={17}
+                                            className="text-violet-300"
+                                        />
 
-                            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/15 bg-violet-500/[0.07]">
-                                <Rocket
-                                    size={24}
-                                    className="text-violet-300"
-                                />
-                            </div>
-                        </div>
-
-                        <h2 className="mt-5 text-base font-bold text-white/80">
-                            No projects yet
-                        </h2>
-
-                        <p className="mt-2 max-w-md text-xs leading-5 text-white/30">
-                            You haven't created any projects yet.
-                            Turn your idea into a collaborative project
-                            and start building with other students.
-                        </p>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                navigate("/projects/create")
-                            }
-                            className="mt-5 flex cursor-pointer items-center gap-2 rounded-xl border border-violet-400/15 bg-violet-500/[0.07] px-5 py-3 text-xs font-bold text-violet-300 transition-all duration-300 hover:border-violet-400/30 hover:bg-violet-500/[0.12]"
-                        >
-                            <Plus size={15} />
-                            Create Your First Project
-                        </button>
-                    </div>
-                )}
-
-                {/* Project Grid */}
-                {!loading && !error && projects.length > 0 && (
-                    <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                        {projects.map((project, index) => (
-                            <article
-                                key={project._id}
-                                className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/20 hover:bg-white/[0.035]"
-                                style={{
-                                    animationDelay: `${index * 80}ms`,
-                                }}
-                            >
-                                <div className="pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-violet-600/[0.06] blur-3xl transition-all duration-500 group-hover:bg-violet-600/[0.1]" />
-
-                                <div className="relative">
-                                    {/* Category + Status */}
-                                    <div className="flex items-start justify-between gap-3">
-                                        <span className="rounded-lg border border-violet-400/10 bg-violet-500/[0.06] px-2.5 py-1 text-[10px] font-semibold text-violet-300/70">
-                                            {project.category}
-                                        </span>
-
-                                        <span
-                                            className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold capitalize ${getStatusStyles(
-                                                project.status
-                                            )}`}
-                                        >
-                                            {project.status}
-                                        </span>
-                                    </div>
-
-                                    {/* Title */}
-                                    <h2 className="mt-5 line-clamp-2 text-base font-bold leading-6 text-white/90">
-                                        {project.title}
+                                        Created by Me
                                     </h2>
 
-                                    {/* Description */}
-                                    <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/30">
-                                        {project.description}
+                                    <p className="mt-1 text-[11px] text-white/25">
+                                        Projects you own and
+                                        manage.
+                                    </p>
+                                </div>
+
+                                <span className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/30">
+                                    {myProjects.length}{" "}
+                                    {myProjects.length ===
+                                    1
+                                        ? "project"
+                                        : "projects"}
+                                </span>
+                            </div>
+
+                            {myProjects.length === 0 ? (
+                                <div className="mt-5 flex min-h-52 flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] px-6 text-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-violet-400/10 bg-violet-500/[0.05]">
+                                        <Rocket
+                                            size={21}
+                                            className="text-violet-300/60"
+                                        />
+                                    </div>
+
+                                    <h3 className="mt-4 text-sm font-bold text-white/60">
+                                        No projects created yet
+                                    </h3>
+
+                                    <p className="mt-1 max-w-sm text-[11px] leading-5 text-white/25">
+                                        Create your first project
+                                        and start building with
+                                        other students.
                                     </p>
 
-                                    {/* Technologies */}
-                                    {project.technologies?.length > 0 && (
-                                        <div className="mt-4 flex flex-wrap gap-1.5">
-                                            {project.technologies
-                                                .slice(0, 4)
-                                                .map((technology) => (
-                                                    <span
-                                                        key={technology}
-                                                        className="rounded-md border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[9px] text-white/35"
-                                                    >
-                                                        {technology}
-                                                    </span>
-                                                ))}
-
-                                            {project.technologies.length >
-                                                4 && (
-                                                <span className="rounded-md border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[9px] text-white/25">
-                                                    +
-                                                    {project.technologies
-                                                        .length - 4}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Footer */}
-                                    <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4">
-                                        <div className="flex items-center gap-1.5 text-[10px] text-white/30">
-                                            <Users size={13} />
-                                            {project.members?.length || 0} /{" "}
-                                            {project.maxTeamSize}
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                navigate(
-                                                    `/projects/${project._id}`
-                                                )
-                                            }
-                                            className="flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-violet-300/70 transition-colors duration-300 hover:text-violet-300"
-                                        >
-                                            Open Project
-                                            <ArrowRight
-                                                size={13}
-                                                className="transition-transform duration-300 group-hover:translate-x-0.5"
-                                            />
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            navigate(
+                                                "/projects/create"
+                                            )
+                                        }
+                                        className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-violet-400/15 bg-violet-500/[0.07] px-4 py-2.5 text-[10px] font-bold text-violet-300 transition-all duration-300 hover:border-violet-400/30 hover:bg-violet-500/[0.12]"
+                                    >
+                                        <Plus size={14} />
+                                        Create Project
+                                    </button>
                                 </div>
-                            </article>
-                        ))}
-                    </section>
+                            ) : (
+                                <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                                    {myProjects.map(
+                                        (project, index) =>
+                                            renderProjectCard(
+                                                project,
+                                                index
+                                            )
+                                    )}
+                                </div>
+                            )}
+                        </section>
+
+                        {/* Joined Projects */}
+                        <section className="mt-12">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="flex items-center gap-2 text-lg font-bold">
+                                        <UserRoundCheck
+                                            size={17}
+                                            className="text-cyan-300"
+                                        />
+
+                                        Joined Projects
+                                    </h2>
+
+                                    <p className="mt-1 text-[11px] text-white/25">
+                                        Projects where you are a
+                                        team member.
+                                    </p>
+                                </div>
+
+                                <span className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/30">
+                                    {joinedProjects.length}{" "}
+                                    {joinedProjects.length ===
+                                    1
+                                        ? "project"
+                                        : "projects"}
+                                </span>
+                            </div>
+
+                            {joinedProjects.length === 0 ? (
+                                <div className="mt-5 flex min-h-52 flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] px-6 text-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-cyan-400/10 bg-cyan-500/[0.05]">
+                                        <Users
+                                            size={21}
+                                            className="text-cyan-300/60"
+                                        />
+                                    </div>
+
+                                    <h3 className="mt-4 text-sm font-bold text-white/60">
+                                        No joined projects yet
+                                    </h3>
+
+                                    <p className="mt-1 max-w-sm text-[11px] leading-5 text-white/25">
+                                        Discover projects and
+                                        request to join a team.
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            navigate(
+                                                "/discover"
+                                            )
+                                        }
+                                        className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-cyan-400/15 bg-cyan-500/[0.07] px-4 py-2.5 text-[10px] font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-400/30 hover:bg-cyan-500/[0.12]"
+                                    >
+                                        Discover Projects
+                                        <ArrowRight
+                                            size={14}
+                                        />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                                    {joinedProjects.map(
+                                        (project, index) =>
+                                            renderProjectCard(
+                                                project,
+                                                index
+                                            )
+                                    )}
+                                </div>
+                            )}
+                        </section>
+                    </>
                 )}
             </div>
         </DashboardLayout>

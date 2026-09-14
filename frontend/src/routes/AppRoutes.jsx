@@ -9,6 +9,7 @@ import ProjectDetails from "../pages/ProjectDetails";
 import ProjectTasks from "../pages/ProjectTasks";
 import ProjectDiscovery from "../pages/ProjectDiscovery";
 import ProjectTeam from "../pages/ProjectTeam";
+import ProjectChat from "../pages/ProjectChat";
 
 import ProtectedRoute from "./ProtectedRoute";
 import useAuth from "../hooks/useAuth";
@@ -39,6 +40,7 @@ function AppRoutes() {
           <Route path="/projects/:projectId/tasks" element={<ProjectTasks />} />
           <Route path="/discover" element={<ProjectDiscovery />} />
           <Route path="/projects/:projectId/team" element={<ProjectTeam />} />
+          <Route path="/projects/:projectId/chat" element={<ProjectChat />} />
         </Route>
 
         <Route path="*" element={<RootRedirect />} />

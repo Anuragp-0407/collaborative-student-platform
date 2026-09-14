@@ -72,6 +72,32 @@ const rejectJoinRequest = async (requestId) => {
 
     return response.data;
 };
+const getProjectMessages = async (projectId, params = {}) => {
+    const response = await api.get(
+        `/projects/${projectId}/messages`,
+        {
+            params,
+        }
+    );
+
+    return response.data;
+};
+
+const sendProjectMessage = async (projectId, message) => {
+    const response = await api.post(
+        `/projects/${projectId}/messages`,
+        {
+            message,
+        }
+    );
+
+    return response.data;
+};
+const getJoinedProjects = async () => {
+    const response = await api.get("/projects/joined-projects");
+
+    return response.data;
+};
 export {
     createProject,
     getProjects,
@@ -83,4 +109,7 @@ export {
     getProjectJoinRequests,
     acceptJoinRequest,
     rejectJoinRequest,
+    getProjectMessages,
+    sendProjectMessage,
+    getJoinedProjects,
 };
