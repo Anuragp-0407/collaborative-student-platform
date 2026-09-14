@@ -98,6 +98,14 @@ const getJoinedProjects = async () => {
 
     return response.data;
 };
+const createTask = async (projectId, taskData) => {
+    const response = await api.post(
+        `/projects/${projectId}/tasks`,
+        taskData
+    );
+
+    return response.data;
+};
 export {
     createProject,
     getProjects,
@@ -112,4 +120,5 @@ export {
     getProjectMessages,
     sendProjectMessage,
     getJoinedProjects,
+    createTask,
 };

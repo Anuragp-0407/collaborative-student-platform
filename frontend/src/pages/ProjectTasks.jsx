@@ -9,30 +9,54 @@ import {
     Clock3,
     Plus,
     UserRound,
+    X,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
-import { getProjectTasks } from "../services/projectService";
+import {
+    createTask,
+    getProjectById,
+    getProjectTasks,
+} from "../services/projectService";
 
 const ProjectTasks = () => {
     const navigate = useNavigate();
     const { projectId } = useParams();
 
     const [tasks, setTasks] = useState([]);
+    const [project, setProject] = useState(null);
+
     const [activeFilter, setActiveFilter] = useState("all");
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [creatingTask, setCreatingTask] = useState(false);
+    const [createError, setCreateError] = useState("");
+
+    const [formData, setFormData] = useState({
+        title: "",
+        description: "",
+        priority: "medium",
+        assignedTo: "",
+        dueDate: "",
+    });
+
     useEffect(() => {
-        const fetchTasks = async () => {
+        const fetchProjectData = async () => {
             try {
                 setLoading(true);
                 setError("");
 
-                const data = await getProjectTasks(projectId);
+                const [projectData, taskData] = await Promise.all([
+                    getProjectById(projectId),
+                    getProjectTasks(projectId),
+                ]);
 
-                setTasks(data.tasks || []);
+                setProject(projectData.project);
+                setTasks(taskData.tasks || []);
             } catch (error) {
                 console.error(
                     "Get project tasks error:",
@@ -48,7 +72,7 @@ const ProjectTasks = () => {
             }
         };
 
-        fetchTasks();
+        fetchProjectData();
     }, [projectId]);
 
     const filteredTasks = useMemo(() => {
@@ -64,22 +88,26 @@ const ProjectTasks = () => {
     const getStatusStyles = (status) => {
         const styles = {
             todo: {
-                badge: "border-white/[0.08] bg-white/[0.04] text-white/45",
+                badge:
+                    "border-white/[0.08] bg-white/[0.04] text-white/45",
                 icon: Circle,
             },
             "in-progress": {
-                badge: "border-amber-400/15 bg-amber-500/[0.07] text-amber-300",
+                badge:
+                    "border-amber-400/15 bg-amber-500/[0.07] text-amber-300",
                 icon: Clock3,
             },
             completed: {
-                badge: "border-emerald-400/15 bg-emerald-500/[0.07] text-emerald-300",
+                badge:
+                    "border-emerald-400/15 bg-emerald-500/[0.07] text-emerald-300",
                 icon: CheckCircle2,
             },
         };
 
         return (
             styles[status] || {
-                badge: "border-white/[0.08] bg-white/[0.04] text-white/45",
+                badge:
+                    "border-white/[0.08] bg-white/[0.04] text-white/45",
                 icon: Circle,
             }
         );
@@ -87,10 +115,12 @@ const ProjectTasks = () => {
 
     const getPriorityStyles = (priority) => {
         const styles = {
-            low: "border-white/[0.07] bg-white/[0.03] text-white/30",
+            low:
+                "border-white/[0.07] bg-white/[0.03] text-white/30",
             medium:
                 "border-cyan-400/15 bg-cyan-500/[0.06] text-cyan-300",
-            high: "border-red-400/15 bg-red-500/[0.06] text-red-300",
+            high:
+                "border-red-400/15 bg-red-500/[0.06] text-red-300",
         };
 
         return (
@@ -124,7 +154,11 @@ const ProjectTasks = () => {
     };
 
     const filters = [
-        { label: "All", value: "all", count: tasks.length },
+        {
+            label: "All",
+            value: "all",
+            count: tasks.length,
+        },
         {
             label: "Todo",
             value: "todo",
@@ -147,6 +181,88 @@ const ProjectTasks = () => {
             ).length,
         },
     ];
+
+    const openCreateModal = () => {
+        setCreateError("");
+
+        setFormData({
+            title: "",
+            description: "",
+            priority: "medium",
+            assignedTo: "",
+            dueDate: "",
+        });
+
+        setShowCreateModal(true);
+    };
+
+    const closeCreateModal = () => {
+        if (creatingTask) {
+            return;
+        }
+
+        setShowCreateModal(false);
+        setCreateError("");
+    };
+
+    const handleFormChange = (event) => {
+        const { name, value } = event.target;
+
+        setFormData((previous) => ({
+            ...previous,
+            [name]: value,
+        }));
+    };
+
+    const handleCreateTask = async (event) => {
+        event.preventDefault();
+
+        if (!formData.title.trim()) {
+            setCreateError("Task title is required.");
+            return;
+        }
+
+        try {
+            setCreatingTask(true);
+            setCreateError("");
+
+            const taskData = {
+                title: formData.title.trim(),
+                description: formData.description.trim(),
+                priority: formData.priority,
+                assignedTo: formData.assignedTo || null,
+                dueDate: formData.dueDate || null,
+            };
+
+            await createTask(projectId, taskData);
+
+            const refreshedTasks = await getProjectTasks(projectId);
+
+            setTasks(refreshedTasks.tasks || []);
+
+            setShowCreateModal(false);
+
+            setFormData({
+                title: "",
+                description: "",
+                priority: "medium",
+                assignedTo: "",
+                dueDate: "",
+            });
+        } catch (error) {
+            console.error(
+                "Create task error:",
+                error.message
+            );
+
+            setCreateError(
+                error.response?.data?.message ||
+                    "Unable to create task."
+            );
+        } finally {
+            setCreatingTask(false);
+        }
+    };
 
     return (
         <DashboardLayout>
@@ -195,9 +311,7 @@ const ProjectTasks = () => {
 
                         <button
                             type="button"
-                            onClick={() => {
-                                // Task creation will be added next.
-                            }}
+                            onClick={openCreateModal}
                             className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-violet-950/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-900/30"
                         >
                             <Plus size={16} />
@@ -289,9 +403,7 @@ const ProjectTasks = () => {
                             {tasks.length === 0 && (
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        // Task creation will be added next.
-                                    }}
+                                    onClick={openCreateModal}
                                     className="mt-5 flex cursor-pointer items-center gap-2 rounded-xl border border-violet-400/15 bg-violet-500/[0.07] px-5 py-3 text-xs font-bold text-violet-300 transition-all duration-300 hover:border-violet-400/30 hover:bg-violet-500/[0.12]"
                                 >
                                     <Plus size={15} />
@@ -327,6 +439,7 @@ const ProjectTasks = () => {
                                                         <StatusIcon
                                                             size={11}
                                                         />
+
                                                         {formatStatus(
                                                             task.status
                                                         )}
@@ -385,6 +498,206 @@ const ProjectTasks = () => {
                             })}
                         </section>
                     )}
+
+                {/* Create Task Modal */}
+                {showCreateModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+                        <div className="w-full max-w-lg rounded-3xl border border-white/[0.08] bg-[#111018] shadow-2xl shadow-black/50">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-5">
+                                <div>
+                                    <h2 className="text-base font-bold text-white/90">
+                                        Create New Task
+                                    </h2>
+
+                                    <p className="mt-1 text-xs text-white/30">
+                                        Add a piece of work to this
+                                        project.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={closeCreateModal}
+                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-white/[0.05] hover:text-white/70"
+                                >
+                                    <X size={17} />
+                                </button>
+                            </div>
+
+                            {/* Form */}
+                            <form
+                                onSubmit={handleCreateTask}
+                                className="space-y-5 p-6"
+                            >
+                                {/* Title */}
+                                <div>
+                                    <label className="mb-2 block text-xs font-semibold text-white/60">
+                                        Task Title
+                                        <span className="ml-1 text-red-400">
+                                            *
+                                        </span>
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        value={formData.title}
+                                        onChange={handleFormChange}
+                                        placeholder="e.g. Build login page"
+                                        maxLength={150}
+                                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-violet-400/40"
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label className="mb-2 block text-xs font-semibold text-white/60">
+                                        Description
+                                    </label>
+
+                                    <textarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleFormChange}
+                                        placeholder="Describe what needs to be done..."
+                                        rows={3}
+                                        maxLength={1000}
+                                        className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-violet-400/40"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                    {/* Priority */}
+                                    <div>
+                                        <label className="mb-2 block text-xs font-semibold text-white/60">
+                                            Priority
+                                        </label>
+
+                                        <select
+                                            name="priority"
+                                            value={formData.priority}
+                                            onChange={handleFormChange}
+                                            className="w-full cursor-pointer rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm text-white outline-none focus:border-violet-400/40"
+                                        >
+                                            <option
+                                                value="low"
+                                                className="bg-[#111018]"
+                                            >
+                                                Low
+                                            </option>
+
+                                            <option
+                                                value="medium"
+                                                className="bg-[#111018]"
+                                            >
+                                                Medium
+                                            </option>
+
+                                            <option
+                                                value="high"
+                                                className="bg-[#111018]"
+                                            >
+                                                High
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    {/* Due Date */}
+                                    <div>
+                                        <label className="mb-2 block text-xs font-semibold text-white/60">
+                                            Due Date
+                                        </label>
+
+                                        <input
+                                            type="date"
+                                            name="dueDate"
+                                            value={formData.dueDate}
+                                            onChange={handleFormChange}
+                                            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm text-white outline-none focus:border-violet-400/40"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Assign */}
+                                <div>
+                                    <label className="mb-2 block text-xs font-semibold text-white/60">
+                                        Assign To
+                                    </label>
+
+                                    <select
+                                        name="assignedTo"
+                                        value={formData.assignedTo}
+                                        onChange={handleFormChange}
+                                        className="w-full cursor-pointer rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm text-white outline-none focus:border-violet-400/40"
+                                    >
+                                        <option
+                                            value=""
+                                            className="bg-[#111018]"
+                                        >
+                                            Unassigned
+                                        </option>
+
+                                        {project?.members?.map(
+                                            (member) => (
+                                                <option
+                                                    key={
+                                                        member.user?._id ||
+                                                        member.user
+                                                    }
+                                                    value={
+                                                        member.user?._id ||
+                                                        member.user
+                                                    }
+                                                    className="bg-[#111018]"
+                                                >
+                                                    {member.user?.name ||
+                                                        "Project Member"}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+                                </div>
+
+                                {/* Error */}
+                                {createError && (
+                                    <div className="flex items-center gap-2 rounded-xl border border-red-400/10 bg-red-500/[0.05] px-4 py-3 text-xs text-red-300">
+                                        <AlertCircle
+                                            size={14}
+                                        />
+                                        {createError}
+                                    </div>
+                                )}
+
+                                {/* Actions */}
+                                <div className="flex justify-end gap-3 border-t border-white/[0.07] pt-5">
+                                    <button
+                                        type="button"
+                                        onClick={closeCreateModal}
+                                        disabled={creatingTask}
+                                        className="cursor-pointer rounded-xl border border-white/[0.08] px-5 py-3 text-xs font-semibold text-white/40 transition-colors hover:bg-white/[0.04] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        disabled={creatingTask}
+                                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-xs font-bold text-white transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {creatingTask && (
+                                            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                        )}
+
+                                        {creatingTask
+                                            ? "Creating..."
+                                            : "Create Task"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </DashboardLayout>
     );
