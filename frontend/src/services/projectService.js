@@ -106,6 +106,14 @@ const createTask = async (projectId, taskData) => {
 
     return response.data;
 };
+const updateTask = async (taskId, taskData) => {
+    const response = await api.put(
+        `/tasks/${taskId}`,
+        taskData
+    );
+
+    return response.data;
+};
 export {
     createProject,
     getProjects,
@@ -121,4 +129,5 @@ export {
     sendProjectMessage,
     getJoinedProjects,
     createTask,
+    updateTask,
 };
