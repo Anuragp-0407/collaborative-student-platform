@@ -10,43 +10,95 @@ import ProjectTasks from "../pages/ProjectTasks";
 import ProjectDiscovery from "../pages/ProjectDiscovery";
 import ProjectTeam from "../pages/ProjectTeam";
 import ProjectChat from "../pages/ProjectChat";
+import Notifications from "../pages/Notifications";
 
 import ProtectedRoute from "./ProtectedRoute";
 import useAuth from "../hooks/useAuth";
 
 function RootRedirect() {
-  const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
+    return (
+        <Navigate
+            to={isAuthenticated ? "/dashboard" : "/login"}
+            replace
+        />
+    );
 }
 
 function AppRoutes() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<RootRedirect />} />
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route
+                    path="/"
+                    element={<RootRedirect />}
+                />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+                <Route
+                    path="/login"
+                    element={<Login />}
+                />
 
-        <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+                <Route
+                    path="/register"
+                    element={<Register />}
+                />
 
-          <Route path="/projects" element={<MyProjects />} />
+                <Route element={<ProtectedRoute />}>
+                    <Route
+                        path="/dashboard"
+                        element={<Dashboard />}
+                    />
 
-          <Route path="/projects/create" element={<CreateProject />} />
+                    <Route
+                        path="/projects"
+                        element={<MyProjects />}
+                    />
 
-          <Route path="/projects/:projectId" element={<ProjectDetails />} />
-          <Route path="/projects/:projectId/tasks" element={<ProjectTasks />} />
-          <Route path="/discover" element={<ProjectDiscovery />} />
-          <Route path="/projects/:projectId/team" element={<ProjectTeam />} />
-          <Route path="/projects/:projectId/chat" element={<ProjectChat />} />
-        </Route>
+                    <Route
+                        path="/projects/create"
+                        element={<CreateProject />}
+                    />
 
-        <Route path="*" element={<RootRedirect />} />
-      </Routes>
-    </BrowserRouter>
-  );
+                    <Route
+                        path="/projects/:projectId"
+                        element={<ProjectDetails />}
+                    />
+
+                    <Route
+                        path="/projects/:projectId/tasks"
+                        element={<ProjectTasks />}
+                    />
+
+                    <Route
+                        path="/discover"
+                        element={<ProjectDiscovery />}
+                    />
+
+                    <Route
+                        path="/projects/:projectId/team"
+                        element={<ProjectTeam />}
+                    />
+
+                    <Route
+                        path="/projects/:projectId/chat"
+                        element={<ProjectChat />}
+                    />
+
+                    <Route
+                        path="/notifications"
+                        element={<Notifications />}
+                    />
+                </Route>
+
+                <Route
+                    path="*"
+                    element={<RootRedirect />}
+                />
+            </Routes>
+        </BrowserRouter>
+    );
 }
 
 export default AppRoutes;
