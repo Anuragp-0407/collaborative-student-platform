@@ -1,6 +1,5 @@
 import {
     Bell,
-    CheckSquare,
     FolderKanban,
     LayoutDashboard,
     LogOut,
@@ -33,11 +32,6 @@ const Sidebar = ({ mobile = false }) => {
             label: "My Projects",
             icon: FolderKanban,
             path: "/projects",
-        },
-        {
-            label: "My Tasks",
-            icon: CheckSquare,
-            path: "/tasks",
         },
         {
             label: "Notifications",
