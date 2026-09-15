@@ -9,6 +9,7 @@ import {
     Clock3,
     Edit3,
     Plus,
+    Trash2,
     UserRound,
     X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import {
     createTask,
+    deleteTask,
     getProjectById,
     getProjectTasks,
     updateTask,
@@ -61,6 +63,12 @@ const ProjectTasks = () => {
         assignedTo: "",
         dueDate: "",
     });
+
+    // Delete task state
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingTask, setDeletingTask] = useState(null);
+    const [deletingTaskLoading, setDeletingTaskLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
 
     useEffect(() => {
         const fetchProjectData = async () => {
@@ -187,6 +195,7 @@ const ProjectTasks = () => {
         }
 
         const year = parsedDate.getFullYear();
+
         const month = String(
             parsedDate.getMonth() + 1
         ).padStart(2, "0");
@@ -197,6 +206,40 @@ const ProjectTasks = () => {
 
         return `${year}-${month}-${day}`;
     };
+
+    /*
+     * Get the currently logged-in user's ID.
+     * The login flow stores the user object in localStorage.
+     */
+    const getCurrentUserId = () => {
+        const storedUser = localStorage.getItem("user");
+
+        if (!storedUser) {
+            return null;
+        }
+
+        try {
+            const user = JSON.parse(storedUser);
+
+            return user?._id || user?.id || null;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const currentUserId = getCurrentUserId();
+
+    /*
+     * Delete permission:
+     * Only the project owner can delete tasks.
+     *
+     * The backend also enforces this permission,
+     * so this frontend check is only for UI visibility.
+     */
+    const isProjectOwner =
+        project?.owner?._id &&
+        currentUserId &&
+        project.owner._id === currentUserId;
 
     const filters = [
         {
@@ -414,9 +457,69 @@ const ProjectTasks = () => {
         }
     };
 
+    // --------------------------------------------------
+    // DELETE TASK
+    // --------------------------------------------------
+
+    const openDeleteModal = (task) => {
+        setDeletingTask(task);
+        setDeleteError("");
+        setShowDeleteModal(true);
+    };
+
+    const closeDeleteModal = () => {
+        if (deletingTaskLoading) {
+            return;
+        }
+
+        setShowDeleteModal(false);
+        setDeletingTask(null);
+        setDeleteError("");
+    };
+
+    const handleDeleteTask = async () => {
+        if (!deletingTask) {
+            return;
+        }
+
+        try {
+            setDeletingTaskLoading(true);
+            setDeleteError("");
+
+            await deleteTask(deletingTask._id);
+
+            /*
+             * No need to make another GET request.
+             * Remove the deleted task directly from state.
+             */
+            setTasks((previousTasks) =>
+                previousTasks.filter(
+                    (task) =>
+                        task._id !== deletingTask._id
+                )
+            );
+
+            setShowDeleteModal(false);
+            setDeletingTask(null);
+        } catch (error) {
+            console.error(
+                "Delete task error:",
+                error.message
+            );
+
+            setDeleteError(
+                error.response?.data?.message ||
+                    "Unable to delete task."
+            );
+        } finally {
+            setDeletingTaskLoading(false);
+        }
+    };
+
     return (
         <DashboardLayout>
             <div className="mx-auto max-w-6xl">
+
                 {/* Back */}
                 <button
                     type="button"
@@ -680,6 +783,27 @@ const ProjectTasks = () => {
 
                                                     Edit
                                                 </button>
+
+                                                {/* Delete - Owner Only */}
+                                                {isProjectOwner && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openDeleteModal(
+                                                                task
+                                                            )
+                                                        }
+                                                        className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-400/10 bg-red-500/[0.03] px-3 py-2 text-[10px] font-semibold text-red-300/60 transition-all duration-300 hover:border-red-400/20 hover:bg-red-500/[0.08] hover:text-red-300"
+                                                    >
+                                                        <Trash2
+                                                            size={
+                                                                12
+                                                            }
+                                                        />
+
+                                                        Delete
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </article>
@@ -1188,6 +1312,111 @@ const ProjectTasks = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Task Modal */}
+                {showDeleteModal && deletingTask && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+                        <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-[#111018] shadow-2xl shadow-black/50">
+
+                            {/* Header */}
+                            <div className="flex items-start justify-between border-b border-white/[0.07] px-6 py-5">
+                                <div>
+                                    <h2 className="text-base font-bold text-white/90">
+                                        Delete Task
+                                    </h2>
+
+                                    <p className="mt-1 text-xs text-white/30">
+                                        This action cannot be undone.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        closeDeleteModal
+                                    }
+                                    disabled={
+                                        deletingTaskLoading
+                                    }
+                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-white/[0.05] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    <X size={17} />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6">
+                                <div className="rounded-2xl border border-red-400/10 bg-red-500/[0.05] p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-400/10 bg-red-500/[0.07]">
+                                            <Trash2
+                                                size={16}
+                                                className="text-red-300"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs text-white/40">
+                                                Are you sure you want to delete this task?
+                                            </p>
+
+                                            <p className="mt-1 text-sm font-bold text-white/80">
+                                                "{deletingTask.title}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {deleteError && (
+                                    <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-400/10 bg-red-500/[0.05] px-4 py-3 text-xs text-red-300">
+                                        <AlertCircle
+                                            size={14}
+                                        />
+
+                                        {deleteError}
+                                    </div>
+                                )}
+
+                                {/* Actions */}
+                                <div className="mt-6 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            closeDeleteModal
+                                        }
+                                        disabled={
+                                            deletingTaskLoading
+                                        }
+                                        className="cursor-pointer rounded-xl border border-white/[0.08] px-5 py-3 text-xs font-semibold text-white/40 transition-colors hover:bg-white/[0.04] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleDeleteTask
+                                        }
+                                        disabled={
+                                            deletingTaskLoading
+                                        }
+                                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-red-500/[0.12] px-5 py-3 text-xs font-bold text-red-300 transition-all hover:bg-red-500/[0.2] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {deletingTaskLoading && (
+                                            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-300/30 border-t-red-300" />
+                                        )}
+
+                                        <Trash2 size={14} />
+
+                                        {deletingTaskLoading
+                                            ? "Deleting..."
+                                            : "Delete Task"}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

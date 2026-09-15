@@ -114,6 +114,12 @@ const updateTask = async (taskId, taskData) => {
 
     return response.data;
 };
+
+const deleteTask = async (taskId) => {
+    const response = await api.delete(`/tasks/${taskId}`);
+
+    return response.data;
+};
 export {
     createProject,
     getProjects,
@@ -130,4 +136,5 @@ export {
     getJoinedProjects,
     createTask,
     updateTask,
+    deleteTask,
 };
