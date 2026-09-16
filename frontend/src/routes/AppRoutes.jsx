@@ -11,6 +11,7 @@ import ProjectDiscovery from "../pages/ProjectDiscovery";
 import ProjectTeam from "../pages/ProjectTeam";
 import ProjectChat from "../pages/ProjectChat";
 import Notifications from "../pages/Notifications";
+import Profile from "../pages/Profile";
 
 import ProtectedRoute from "./ProtectedRoute";
 import useAuth from "../hooks/useAuth";
@@ -90,6 +91,7 @@ function AppRoutes() {
                         path="/notifications"
                         element={<Notifications />}
                     />
+                    <Route path="/profile" element={<Profile />} />
                 </Route>
 
                 <Route

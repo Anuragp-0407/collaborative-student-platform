@@ -6,7 +6,6 @@ import {
     Plus,
     Search,
     Settings,
-    UserRound,
     Zap,
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -41,11 +40,6 @@ const Sidebar = ({ mobile = false }) => {
     ];
 
     const secondaryNavigation = [
-        {
-            label: "Profile",
-            icon: UserRound,
-            path: "/profile",
-        },
         {
             label: "Settings",
             icon: Settings,

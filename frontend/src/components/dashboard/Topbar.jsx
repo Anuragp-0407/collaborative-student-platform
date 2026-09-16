@@ -344,7 +344,7 @@ const Topbar = ({ onMenuClick }) => {
                     onClick={() =>
                         navigate("/notifications")
                     }
-                    className="group relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-white/40 transition-all duration-300 hover:border-violet-400/20 hover:bg-violet-500/[0.05] hover:text-violet-300"
+                    className="group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-white/40 transition-all duration-300 hover:border-violet-400/20 hover:bg-violet-500/[0.05] hover:text-violet-300"
                     aria-label="Notifications"
                 >
                     <Bell
@@ -359,7 +359,7 @@ const Topbar = ({ onMenuClick }) => {
                 <button
                     type="button"
                     onClick={() => navigate("/profile")}
-                    className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] p-1.5 pr-3 transition-all duration-300 hover:border-violet-400/20 hover:bg-violet-500/[0.05]"
+                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] p-1.5 pr-3 transition-all duration-300 hover:border-violet-400/20 hover:bg-violet-500/[0.05]"
                 >
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-xs font-bold text-violet-300">
                         {user?.name
